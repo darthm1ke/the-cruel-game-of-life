@@ -9,14 +9,14 @@ import { button, pixelText, type ButtonHandle } from '../ui/text';
 
 /** Each action plays a fitting animation while it runs in real time. */
 const POSE_FOR_ACTION: Record<ActionId, Pose> = {
-  work: 'sit', // sit at the computer
+  work: 'sit',
   walk: 'walk',
   exercise: 'exercise',
   cook: 'eat',
   snack: 'eat',
   skip: 'idle',
-  search: 'sit', // hunched over the laptop
-  rest: 'slump', // slumped, dozing
+  search: 'sit',
+  rest: 'slump',
   fridge: 'eat',
   med: 'idle',
 };
@@ -39,18 +39,37 @@ const ACTIONS: ActionDef[] = [
   { id: 'med', label: 'Gray Pen $90' },
 ];
 
+// ----- Isometric room layout -----
 const ROOM = { x: 0, y: 22, w: 432, h: 200 };
-const FLOOR_Y = ROOM.y + ROOM.h - 30; // top of the floor strip / where feet rest
+// Iso projection: a vertex (vx, vy) on the floor grid -> screen point.
+const ISO = { tw: 54, th: 24, ox: 189, oy: 64 } as const;
+const GRID = { cols: 7, rows: 5 } as const;
+const WALL_H = 44;
+const MAN_SCALE = 0.85;
 
-/** Floor x-positions of the action zones the sprite walks between. */
-const ZONE = { kitchen: 70, bed: 150, center: 230, desk: 320, gym: 392 } as const;
+type V = { x: number; y: number };
+const iso = (vx: number, vy: number): V => ({
+  x: ISO.ox + (vx - vy) * (ISO.tw / 2),
+  y: ISO.oy + (vx + vy) * (ISO.th / 2),
+});
 
-const SUN = 0xf2c84a; // daytime sun (warm yellow)
-const MOON = 0xd8d8e8; // night moon (pale)
-const WINDOW_DAY = 0x79a8d8; // bright sky-blue seen while the sun is up
-const WINDOW_NIGHT = 0x10101e; // dark blue once the moon is out
+/**
+ * Where the character STANDS to perform each action (floor-grid vertex coords).
+ * One activity per corner; the middle of the floor is open space for walking.
+ */
+const ZONE: Record<'kitchen' | 'desk' | 'bed' | 'gym' | 'center', V> = {
+  kitchen: { x: 1.3, y: 1.5 }, // back-left
+  desk: { x: 5.5, y: 1.5 }, // back-right
+  bed: { x: 1.3, y: 3.8 }, // front-left
+  gym: { x: 5.5, y: 3.8 }, // front-right
+  center: { x: 3.5, y: 2.6 }, // open middle
+};
 
-/** Blend two 0xRRGGBB colors (t in 0..1). */
+const SUN = 0xf2c84a;
+const MOON = 0xd8d8e8;
+const WINDOW_DAY = 0x79a8d8;
+const WINDOW_NIGHT = 0x10101e;
+
 function lerpColor(a: number, b: number, t: number): number {
   const c = Phaser.Display.Color.Interpolate.ColorWithColor(
     Phaser.Display.Color.IntegerToColor(a),
@@ -64,7 +83,14 @@ function lerpColor(a: number, b: number, t: number): number {
 export class GameScene extends Phaser.Scene {
   private gs!: GameState;
   private man!: Phaser.GameObjects.Sprite;
-  private sky!: Phaser.GameObjects.Graphics;
+  private manVtx: V = { ...ZONE.center };
+
+  private windowG!: Phaser.GameObjects.Graphics; // animated window (sun/moon)
+  private overlay!: Phaser.GameObjects.Graphics; // time-of-day mood tint
+  private winPts: V[] = []; // window parallelogram corners
+  private winMidL: V = { x: 0, y: 0 };
+  private winMidR: V = { x: 0, y: 0 };
+
   private bars: Record<string, StatBar> = {};
   private hud!: Phaser.GameObjects.Text;
   private clock!: Phaser.GameObjects.Text;
@@ -76,11 +102,11 @@ export class GameScene extends Phaser.Scene {
   private endDayBtn!: ButtonHandle;
   private popupLayer!: Phaser.GameObjects.Container;
 
-  private busy = false; // popup open
-  private running = false; // an action (or the night) is animating
+  private busy = false;
+  private running = false;
   private activeTween?: Phaser.Tweens.Tween;
-  private hurryHeld = false; // true while hurry is held, so new actions start fast too
-  private zzz?: Phaser.GameObjects.Text; // floating sleep "z"s during the night
+  private hurryHeld = false;
+  private zzz?: Phaser.GameObjects.Text;
 
   constructor() {
     super('Game');
@@ -93,59 +119,111 @@ export class GameScene extends Phaser.Scene {
     this.running = false;
     this.bars = {};
     this.actionButtons = [];
+    this.manVtx = { ...ZONE.center };
 
-    this.sky = this.add.graphics();
     this.drawRoom();
     this.buildHud();
     this.buildStatBars();
     this.buildActions();
     this.buildKeys();
 
-    this.popupLayer = this.add.container(0, 0).setDepth(100);
+    this.popupLayer = this.add.container(0, 0).setDepth(1000);
     this.refresh();
   }
 
-  // ---- Static room art ----
+  // ---- Isometric room ----
   private drawRoom() {
-    const g = this.add.graphics();
-    g.fillStyle(PAL.floor, 1).fillRect(ROOM.x, ROOM.y + ROOM.h - 30, ROOM.w, 30);
-    g.lineStyle(1, PAL.bg2, 1).strokeRect(ROOM.x + 0.5, ROOM.y + 0.5, ROOM.w - 1, ROOM.h - 1);
+    const g = this.add.graphics().setDepth(-20);
 
-    const floorY = FLOOR_Y;
-    const place = (n: ObjName, x: number, y: number, scale = 1.5) =>
-      this.add.image(x, y, objKey(n)).setOrigin(0.5, 1).setScale(scale).setDepth(2);
+    // ambient backdrop behind the walls
+    g.fillStyle(PAL.bg1, 1).fillRect(ROOM.x, ROOM.y, ROOM.w, ROOM.h);
 
-    // Objects sit at their action ZONES (see zoneX). Faint floor markers under each.
-    const marks = this.add.graphics().setDepth(1);
-    const mark = (x: number, label: string) => {
-      marks.fillStyle(PAL.bg1, 0.5).fillRect(x - 30, floorY - 2, 60, 4);
-      pixelText(this, x, floorY + 2, label, 7, PAL.grayDark).setOrigin(0.5, 0).setDepth(1);
-    };
-    mark(ZONE.kitchen, 'KITCHEN');
-    mark(ZONE.bed, 'BED');
-    mark(ZONE.center, '');
-    mark(ZONE.desk, 'DESK');
-    mark(ZONE.gym, 'GYM');
+    // floor corners
+    const A = iso(0, 0);
+    const B = iso(GRID.cols, 0);
+    const C = iso(GRID.cols, GRID.rows);
+    const D = iso(0, GRID.rows);
+    const up = (p: V): V => ({ x: p.x, y: p.y - WALL_H });
 
-    place('fridge', ZONE.kitchen - 18, floorY + 30);
-    place('snack', ZONE.kitchen + 16, floorY + 18, 1.2); // counter snack
-    place('bed', ZONE.bed, floorY + 32);
-    place('scale', ZONE.center, floorY + 28);
-    place('phone', ZONE.center + 26, floorY + 26, 1.2);
-    place('laptop', ZONE.desk, floorY + 14);
-    place('treadmill', ZONE.gym, floorY + 30);
-    place('mailbox', 416, floorY + 8);
+    // back-left wall (along A-D) and back-right wall (along A-B)
+    g.fillStyle(0x241d30, 1).fillPoints([A, D, up(D), up(A)], true); // left, darker
+    g.fillStyle(0x2f2640, 1).fillPoints([A, B, up(B), up(A)], true); // right, lighter
+    // baseboards
+    g.fillStyle(PAL.bg0, 1);
+    g.fillPoints([A, D, { x: D.x, y: D.y - 3 }, { x: A.x, y: A.y - 3 }], true);
+    g.fillPoints([A, B, { x: B.x, y: B.y - 3 }, { x: A.x, y: A.y - 3 }], true);
 
-    this.man = this.add
-      .sprite(ZONE.center, floorY + 24, '')
-      .setOrigin(0.5, 1)
-      .setScale(1.25)
-      .setDepth(5)
-      .play(animKey(this.gs.tier.tier, 'idle'));
+    // floor diamond + tile checker
+    g.fillStyle(PAL.floor, 1).fillPoints([A, B, C, D], true);
+    for (let c = 0; c < GRID.cols; c++) {
+      for (let r = 0; r < GRID.rows; r++) {
+        if ((c + r) % 2 === 0) continue;
+        const t0 = iso(c, r);
+        const t1 = iso(c + 1, r);
+        const t2 = iso(c + 1, r + 1);
+        const t3 = iso(c, r + 1);
+        g.fillStyle(0x312930, 1).fillPoints([t0, t1, t2, t3], true);
+      }
+    }
+    // floor grid lines
+    g.lineStyle(1, PAL.bg2, 0.5);
+    for (let c = 0; c <= GRID.cols; c++) g.lineBetween(iso(c, 0).x, iso(c, 0).y, iso(c, GRID.rows).x, iso(c, GRID.rows).y);
+    for (let r = 0; r <= GRID.rows; r++) g.lineBetween(iso(0, r).x, iso(0, r).y, iso(GRID.cols, r).x, iso(GRID.cols, r).y);
+
+    // window parallelogram on the back-right wall
+    const dir = { x: ISO.tw / 2, y: ISO.th / 2 }; // one column step along the wall
+    const TL = { x: up(A).x + dir.x * 1.3, y: up(A).y + dir.y * 1.3 + 5 };
+    const TR = { x: TL.x + dir.x * 1.7, y: TL.y + dir.y * 1.7 };
+    const BR = { x: TR.x, y: TR.y + 22 };
+    const BL = { x: TL.x, y: TL.y + 22 };
+    this.winPts = [TL, TR, BR, BL];
+    this.winMidL = { x: (TL.x + BL.x) / 2, y: (TL.y + BL.y) / 2 };
+    this.winMidR = { x: (TR.x + BR.x) / 2, y: (TR.y + BR.y) / 2 };
+
+    // animated window + mood overlay
+    this.windowG = this.add.graphics().setDepth(-10);
+    this.overlay = this.add.graphics().setDepth(900);
+
+    // objects grouped into their corner areas (placed behind the stand spot)
+    // kitchen (back-left)
+    this.placeObj('fridge', 0.7, 0.7, 1.3);
+    this.placeObj('snack', 1.9, 0.7, 1.0);
+    // desk / work (back-right)
+    this.placeObj('laptop', 5.9, 0.9, 1.2);
+    this.placeObj('mailbox', 6.4, 0.3, 1.0);
+    // gym (front-right)
+    this.placeObj('treadmill', 6.0, 3.7, 1.4);
+    // bed (front-left)
+    this.placeObj('bed', 0.8, 3.5, 1.5);
+    // open middle
+    this.placeObj('scale', 3.5, 1.3, 1.2);
+    this.placeObj('phone', 2.6, 2.1, 1.0);
+
+    // zone labels on the floor
+    const label = (v: V, text: string) =>
+      pixelText(this, iso(v.x, v.y).x, iso(v.x, v.y).y, text, 7, PAL.grayDark).setOrigin(0.5, 0.5).setDepth(0.5);
+    label({ x: 1.3, y: 0.9 }, 'KITCHEN');
+    label({ x: 5.5, y: 0.9 }, 'DESK');
+    label({ x: 1.3, y: 4.3 }, 'BED');
+    label({ x: 5.5, y: 4.3 }, 'GYM');
+
+    this.man = this.add.sprite(0, 0, '').setOrigin(0.5, 1).setScale(MAN_SCALE).play(animKey(this.gs.tier.tier, 'idle'));
+    this.setManPos(this.manVtx.x, this.manVtx.y);
   }
 
-  /** x of the action zone the sprite walks to before performing `id`. */
-  private zoneX(id: ActionId): number {
+  private placeObj(n: ObjName, vx: number, vy: number, scale = 1.2) {
+    const p = iso(vx, vy);
+    this.add.image(p.x, p.y, objKey(n)).setOrigin(0.5, 1).setScale(scale).setDepth(p.y);
+  }
+
+  /** Move the character to floor-grid vertex (vx, vy): project + depth-sort. */
+  private setManPos(vx: number, vy: number) {
+    this.manVtx = { x: vx, y: vy };
+    const p = iso(vx, vy);
+    this.man.setPosition(Math.round(p.x), Math.round(p.y)).setDepth(p.y);
+  }
+
+  private zoneVtx(id: ActionId): V {
     switch (id) {
       case 'work':
       case 'search':
@@ -162,33 +240,48 @@ export class GameScene extends Phaser.Scene {
       case 'skip':
         return ZONE.center;
       case 'walk':
-        return Phaser.Math.Between(ZONE.kitchen + 20, ZONE.gym - 20); // wander
+        return { x: Phaser.Math.FloatBetween(1, 4.5), y: Phaser.Math.FloatBetween(1, 3.5) };
     }
   }
 
-  /** Sky tint + window sun/moon for a (possibly fractional) slot position. */
+  /** Redraw the window (sun/moon) and the day/night mood tint over the room. */
   private paintSky(skyColor: number, slotFloat: number) {
-    this.sky.clear();
-    this.sky.fillStyle(skyColor, 1).fillRect(ROOM.x, ROOM.y, ROOM.w, ROOM.h - 30);
-    const wx = ROOM.x + 28;
-    const wy = ROOM.y + 12;
-    this.sky.fillStyle(PAL.ink, 1).fillRect(wx - 2, wy - 2, 56, 40);
-    // Window interior follows the sun: day-blue by day, fading to dark blue at dusk.
     const dusk = Phaser.Math.Clamp((slotFloat - 2.8) / 0.8, 0, 1);
-    this.sky.fillStyle(lerpColor(WINDOW_DAY, WINDOW_NIGHT, dusk), 1).fillRect(wx, wy, 52, 36);
+    const winBg = lerpColor(WINDOW_DAY, WINDOW_NIGHT, dusk);
     const night = slotFloat >= 3.2;
-    const t = Math.min(slotFloat, 4) / 4;
-    const orbX = wx + 6 + t * 40;
-    const orbY = wy + 28 - Math.round(Math.sin(t * Math.PI) * 20);
-    this.sky.fillStyle(night ? MOON : SUN, 1).fillCircle(orbX, orbY, 4);
+    const t = Phaser.Math.Clamp(slotFloat, 0, 4) / 4;
+    this.drawWindow(winBg, night ? MOON : SUN, t);
+    this.drawOverlay(skyColor);
+  }
+
+  private drawWindow(bg: number, orb: number, t: number) {
+    const g = this.windowG;
+    g.clear();
+    g.fillStyle(PAL.ink, 1).fillPoints(this.framePts(2), true);
+    g.fillStyle(bg, 1).fillPoints(this.winPts, true);
+    const ox = this.winMidL.x + (this.winMidR.x - this.winMidL.x) * t;
+    const oy = this.winMidL.y + (this.winMidR.y - this.winMidL.y) * t - Math.round(Math.sin(t * Math.PI) * 8);
+    g.fillStyle(orb, 1).fillCircle(ox, oy, 4);
+  }
+
+  /** Expand the window polygon by `m` px for the dark frame behind it. */
+  private framePts(m: number): V[] {
+    const cx = (this.winPts[0].x + this.winPts[2].x) / 2;
+    const cy = (this.winPts[0].y + this.winPts[2].y) / 2;
+    return this.winPts.map((p) => ({ x: p.x + Math.sign(p.x - cx) * m, y: p.y + Math.sign(p.y - cy) * m }));
+  }
+
+  private drawOverlay(skyColor: number) {
+    this.overlay.clear();
+    this.overlay.fillStyle(skyColor, 0.16).fillRect(ROOM.x, ROOM.y, ROOM.w, ROOM.h);
   }
 
   private buildHud() {
-    const g = this.add.graphics();
+    const g = this.add.graphics().setDepth(800);
     g.fillStyle(PAL.bg2, 1).fillRect(0, 0, GAME.WIDTH, 20);
-    this.hud = pixelText(this, 6, 5, '', 11, PAL.white);
-    this.clock = pixelText(this, GAME.WIDTH - 190, 5, '', 11, PAL.yellow);
-    this.timePips = this.add.graphics();
+    this.hud = pixelText(this, 6, 5, '', 11, PAL.white).setDepth(801);
+    this.clock = pixelText(this, GAME.WIDTH - 190, 5, '', 11, PAL.yellow).setDepth(801);
+    this.timePips = this.add.graphics().setDepth(801);
   }
 
   private buildStatBars() {
@@ -227,7 +320,6 @@ export class GameScene extends Phaser.Scene {
       if (a.id === 'med') this.medButton = btn;
     });
 
-    // Bottom row: HURRY (left) + SLEEP/END DAY (right).
     const rowY = startY + 2 * (bh + gap);
     this.hurryBtn = button(this, startX, rowY, 200, 30, '⏩ HOLD TO HURRY  (F)', () => {}, {
       fill: PAL.greenDark,
@@ -252,7 +344,6 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-SPACE', () => this.doAction('exercise'));
     kb.on('keydown-E', () => this.doAction('fridge'));
     kb.on('keydown-SHIFT', () => this.resistCraving());
-    // Hold F to hurry the current action.
     kb.on('keydown-F', () => this.setHurry(true));
     kb.on('keyup-F', () => this.setHurry(false));
   }
@@ -285,10 +376,7 @@ export class GameScene extends Phaser.Scene {
     this.runAction(id, before, after, slotBefore);
   }
 
-  /**
-   * Animate the action over real time. First the sprite WALKS to the action's
-   * zone, then it plays the themed pose while stats ramp and the clock sweeps.
-   */
+  /** Walk diagonally across the floor to the action's zone, then play the pose. */
   private runAction(id: ActionId, before: Stats, after: Stats, slotBefore: number) {
     this.running = true;
     this.setActionsEnabled(false);
@@ -296,14 +384,14 @@ export class GameScene extends Phaser.Scene {
     this.endDayBtn.setEnabled(false);
 
     const tier = this.gs.tier.tier;
-    const startX = this.man.x;
-    const targetX = this.zoneX(id);
-    const dist = Math.abs(targetX - startX);
-    // Walk takes a slice of the action proportional to distance (whole thing for Walk).
-    const travelP = id === 'walk' ? 1 : Phaser.Math.Clamp(dist / 360, 0.12, 0.5);
+    const start = { ...this.manVtx };
+    const target = this.zoneVtx(id);
+    const dist = Math.hypot(target.x - start.x, target.y - start.y);
+    const travelP = id === 'walk' ? 1 : Phaser.Math.Clamp(dist / 7, 0.14, 0.5);
     const pose = POSE_FOR_ACTION[id] ?? 'idle';
-
-    this.man.setFlipX(targetX < startX);
+    // face the screen-x direction of travel
+    const screenDX = target.x - target.y - (start.x - start.y);
+    this.man.setFlipX(screenDX < 0);
     this.man.play(animKey(tier, 'walk'));
     let arrived = false;
 
@@ -316,10 +404,11 @@ export class GameScene extends Phaser.Scene {
       onUpdate: () => {
         const p = prog.p;
         if (p < travelP) {
-          this.man.x = Math.round(startX + (targetX - startX) * (p / travelP));
+          const k = p / travelP;
+          this.setManPos(start.x + (target.x - start.x) * k, start.y + (target.y - start.y) * k);
         } else if (!arrived) {
           arrived = true;
-          this.man.x = targetX;
+          this.setManPos(target.x, target.y);
           this.man.setFlipX(false);
           this.man.play(animKey(this.gs.tier.tier, pose));
         }
@@ -358,8 +447,6 @@ export class GameScene extends Phaser.Scene {
     this.hurryHeld = fast;
     if (this.activeTween) this.activeTween.timeScale = fast ? ACTION.fastFactor : 1;
   }
-
-  /** Apply held-hurry to a freshly created tween (so holding F across actions works). */
   private applyHurry() {
     if (this.activeTween && this.hurryHeld) this.activeTween.timeScale = ACTION.fastFactor;
   }
@@ -373,7 +460,6 @@ export class GameScene extends Phaser.Scene {
 
   private afterTurn() {
     if (this.gs.over) return this.toGameOver();
-    // Control override: the game takes a (bad) turn for you, also animated.
     if (this.gs.stats.control <= 0 && this.gs.slotsLeft > 0) {
       this.time.delayedCall(500, () => {
         if (this.running || this.gs.over) return;
@@ -392,22 +478,21 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Sleep: walk to bed, lie down horizontally, run the night, wake into a new day. */
+  // ---- Night / sleep ----
   private endDay() {
     if (this.running || this.busy || this.gs.over) return;
-    // Resolve the night's logic now (popups queued); reveal it on waking.
     this.gs.endDay();
-
     this.running = true;
     this.setActionsEnabled(false);
     this.endDayBtn.setEnabled(false);
-    this.hurryBtn.setEnabled(true); // you can hurry the night too
+    this.hurryBtn.setEnabled(true);
 
     const tier = this.gs.tier.tier;
-    const startX = this.man.x;
+    const start = { ...this.manVtx };
+    const target = ZONE.bed;
     const travelP = 0.28;
     let inBed = false;
-    this.man.setFlipX(ZONE.bed < startX);
+    this.man.setFlipX(target.x - target.y - (start.x - start.y) < 0);
     this.man.play(animKey(tier, 'walk'));
 
     const prog = { p: 0 };
@@ -419,7 +504,8 @@ export class GameScene extends Phaser.Scene {
       onUpdate: () => {
         const p = prog.p;
         if (p < travelP) {
-          this.man.x = Math.round(startX + (ZONE.bed - startX) * (p / travelP));
+          const k = p / travelP;
+          this.setManPos(start.x + (target.x - start.x) * k, start.y + (target.y - start.y) * k);
         } else if (!inBed) {
           inBed = true;
           this.lieDownToSleep();
@@ -431,19 +517,13 @@ export class GameScene extends Phaser.Scene {
     this.applyHurry();
   }
 
-  /** Rotate the sprite flat onto the bed, eyes shut, with floating "z"s. */
   private lieDownToSleep() {
+    const p = iso(ZONE.bed.x, ZONE.bed.y);
     this.man.play(animKey(this.gs.tier.tier, 'slump'));
-    this.man.setOrigin(0.5, 0.5).setFlipX(false).setAngle(-90).setPosition(ZONE.bed, FLOOR_Y - 4);
+    this.man.setOrigin(0.5, 0.5).setFlipX(false).setAngle(-90).setPosition(p.x, p.y - 8).setDepth(p.y + 50);
     this.zzz?.destroy();
-    this.zzz = pixelText(this, ZONE.bed + 18, FLOOR_Y - 22, 'z', 10, PAL.white).setDepth(6);
-    this.tweens.add({
-      targets: this.zzz,
-      y: FLOOR_Y - 40,
-      alpha: { from: 1, to: 0 },
-      duration: 1100,
-      repeat: -1,
-    });
+    this.zzz = pixelText(this, p.x + 16, p.y - 24, 'z', 10, PAL.white).setDepth(950);
+    this.tweens.add({ targets: this.zzz, y: p.y - 42, alpha: { from: 1, to: 0 }, duration: 1100, repeat: -1 });
   }
 
   private wakeUp() {
@@ -451,8 +531,8 @@ export class GameScene extends Phaser.Scene {
     this.activeTween = undefined;
     this.zzz?.destroy();
     this.zzz = undefined;
-    // Stand the sprite back up beside the bed.
-    this.man.setOrigin(0.5, 1).setAngle(0).setPosition(ZONE.bed, FLOOR_Y + 24);
+    this.man.setOrigin(0.5, 1).setAngle(0);
+    this.setManPos(ZONE.bed.x, ZONE.bed.y);
     this.setActionsEnabled(true);
     this.hurryBtn.setEnabled(false);
     this.endDayBtn.setEnabled(true);
@@ -463,31 +543,17 @@ export class GameScene extends Phaser.Scene {
     if (this.gs.over) this.toGameOver();
   }
 
-  /** Window/sky during the night: evening -> deep night (moon) -> dawn (sun rising). */
   private renderNightSky(p: number) {
-    const col = p < 0.5 ? lerpColor(PAL.skyEvening, PAL.skyNight, p / 0.5) : lerpColor(PAL.skyNight, PAL.skyMorning, (p - 0.5) / 0.5);
-    this.sky.clear();
-    this.sky.fillStyle(col, 1).fillRect(ROOM.x, ROOM.y, ROOM.w, ROOM.h - 30);
-    const wx = ROOM.x + 28;
-    const wy = ROOM.y + 12;
-    this.sky.fillStyle(PAL.ink, 1).fillRect(wx - 2, wy - 2, 56, 40);
+    const sky = p < 0.5 ? lerpColor(PAL.skyEvening, PAL.skyNight, p / 0.5) : lerpColor(PAL.skyNight, PAL.skyMorning, (p - 0.5) / 0.5);
     const dawn = p > 0.82;
-    this.sky.fillStyle(dawn ? WINDOW_DAY : WINDOW_NIGHT, 1).fillRect(wx, wy, 52, 36);
-    if (dawn) {
-      // sun cresting the horizon
-      this.sky.fillStyle(SUN, 1).fillCircle(wx + 8, wy + 30, 4);
-    } else {
-      const mt = p / 0.82;
-      const mx = wx + 6 + mt * 40;
-      const my = wy + 28 - Math.round(Math.sin(mt * Math.PI) * 20);
-      this.sky.fillStyle(MOON, 1).fillCircle(mx, my, 4);
-    }
-    // clock rolls 23:00 -> 07:00 through the night
+    const t = dawn ? 0.05 : p / 0.82;
+    this.drawWindow(dawn ? WINDOW_DAY : WINDOW_NIGHT, dawn ? SUN : MOON, t);
+    this.drawOverlay(sky);
     const hour = (23 + p * 8) % 24;
     this.clock.setText(`${String(Math.floor(hour)).padStart(2, '0')}:00  Night`);
   }
 
-  // ---- UI refresh (idle / between actions) ----
+  // ---- UI refresh ----
   private refresh() {
     const s = this.gs.stats;
     const idleK = animKey(this.gs.tier.tier, 'idle');
@@ -509,9 +575,7 @@ export class GameScene extends Phaser.Scene {
 
   private renderHud(weight: number, money: number, debt: number) {
     this.hud.setText(
-      `DAY ${this.gs.day}    ${weight.toFixed(1)}kg [${this.gs.tier.name}]    $${Math.round(money)}    debt $${Math.round(
-        debt
-      )}`
+      `DAY ${this.gs.day}    ${weight.toFixed(1)}kg [${this.gs.tier.name}]    $${Math.round(money)}    debt $${Math.round(debt)}`
     );
   }
 
@@ -524,16 +588,9 @@ export class GameScene extends Phaser.Scene {
     const mm = Math.floor((hourF - Math.floor(hourF)) * 60);
     this.clock.setText(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}  ${tod.label}`);
 
-    // interpolate sky between this block and the next
     const next = timeOfDay(Math.min(f + 1, 4));
     const frac = clamped - f;
-    const c = Phaser.Display.Color.Interpolate.ColorWithColor(
-      Phaser.Display.Color.IntegerToColor(tod.sky),
-      Phaser.Display.Color.IntegerToColor(next.sky),
-      100,
-      Math.floor(frac * 100)
-    );
-    this.paintSky(Phaser.Display.Color.GetColor(c.r, c.g, c.b), clamped);
+    this.paintSky(lerpColor(tod.sky, next.sky, frac), clamped);
     this.drawTimePips(clamped);
   }
 
@@ -557,10 +614,10 @@ export class GameScene extends Phaser.Scene {
 
   private flashMessage(text: string) {
     if (this.msg) this.msg.destroy();
-    this.msg = pixelText(this, 6, GAME.HEIGHT - 16, text, 11, PAL.white).setDepth(50);
+    this.msg = pixelText(this, 6, GAME.HEIGHT - 16, text, 11, PAL.white).setDepth(950);
   }
 
-  // ---- Event popups ----
+  // ---- Popups ----
   private drainPopups() {
     let e = this.gs.takePopup();
     const lines: string[] = [];

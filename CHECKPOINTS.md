@@ -207,6 +207,14 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
 - [x] Production build deploys as static files
   // VERIFY: `npm run build` produces `dist/`; serving it runs the game identically to dev.
   // DONE: `npm run build` succeeds (tsc --noEmit + vite build -> dist/).
+- [x] ISOMETRIC PERSPECTIVE: reworked the room from a flat front-on view to a 3/4
+      isometric view - an angled tiled floor (diamond grid), two back walls meeting at a
+      corner, the window on the back wall, depth-sorted objects, and the character walking
+      diagonally across the floor. Activities are separated into corners (KITCHEN back-left,
+      DESK back-right, BED front-left, GYM front-right) with an open middle for walking.
+      A full pre-iso backup lives at ../thecruelgameoflife-BACKUP-frontview/.
+  // VERIFY: walk to each corner zone + sleep, confirm depth/looks right. DONE:
+  //         verify-shots/5 (room), /6b (sit at desk), /8 (evening), /9 (sleep). All green.
 - [x] PUBLISHED + LIVE: public GitHub repo with topics/description/Discussions, and a
       GitHub Actions workflow auto-deploys the build to GitHub Pages on every push.
   // VERIFY: the public URL boots the game in a real browser with no errors. DONE:
