@@ -42,9 +42,10 @@ const ACTIONS: ActionDef[] = [
 // ----- Isometric room layout -----
 const ROOM = { x: 0, y: 22, w: 432, h: 200 };
 // Iso projection: a vertex (vx, vy) on the floor grid -> screen point.
-const ISO = { tw: 54, th: 24, ox: 189, oy: 64 } as const;
+// th/tw = sin(tilt): ~18/54 -> a subtle ~20 degree tilt (shallower than true iso).
+const ISO = { tw: 54, th: 18, ox: 189, oy: 84 } as const;
 const GRID = { cols: 7, rows: 5 } as const;
-const WALL_H = 44;
+const WALL_H = 54;
 const MAN_SCALE = 0.85;
 
 type V = { x: number; y: number };
@@ -184,20 +185,21 @@ export class GameScene extends Phaser.Scene {
     this.windowG = this.add.graphics().setDepth(-10);
     this.overlay = this.add.graphics().setDepth(900);
 
-    // objects grouped into their corner areas (placed behind the stand spot)
+    // objects grouped into their corner areas, scaled to read as real furniture
+    // relative to the character (~the kid's height), not toys.
     // kitchen (back-left)
-    this.placeObj('fridge', 0.7, 0.7, 1.3);
-    this.placeObj('snack', 1.9, 0.7, 1.0);
+    this.placeObj('fridge', 0.7, 0.7, 2.4); // a fridge ~ the kid's height
+    this.placeObj('snack', 1.9, 0.9, 1.5);
     // desk / work (back-right)
-    this.placeObj('laptop', 5.9, 0.9, 1.2);
-    this.placeObj('mailbox', 6.4, 0.3, 1.0);
+    this.placeObj('laptop', 5.9, 0.9, 1.8);
+    this.placeObj('mailbox', 6.4, 0.3, 1.9);
     // gym (front-right)
-    this.placeObj('treadmill', 6.0, 3.7, 1.4);
+    this.placeObj('treadmill', 6.0, 3.6, 2.3);
     // bed (front-left)
-    this.placeObj('bed', 0.8, 3.5, 1.5);
+    this.placeObj('bed', 0.9, 3.4, 2.2);
     // open middle
-    this.placeObj('scale', 3.5, 1.3, 1.2);
-    this.placeObj('phone', 2.6, 2.1, 1.0);
+    this.placeObj('scale', 3.5, 1.3, 1.4);
+    this.placeObj('phone', 2.6, 2.1, 1.3);
 
     // zone labels on the floor
     const label = (v: V, text: string) =>
