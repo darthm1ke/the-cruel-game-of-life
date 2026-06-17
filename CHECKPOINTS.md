@@ -207,6 +207,11 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
 - [x] Production build deploys as static files
   // VERIFY: `npm run build` produces `dist/`; serving it runs the game identically to dev.
   // DONE: `npm run build` succeeds (tsc --noEmit + vite build -> dist/).
+- [x] PUBLISHED + LIVE: public GitHub repo with topics/description/Discussions, and a
+      GitHub Actions workflow auto-deploys the build to GitHub Pages on every push.
+  // VERIFY: the public URL boots the game in a real browser with no errors. DONE:
+  //         https://darthm1ke.github.io/the-cruel-game-of-life/ returns 200, bundle loads,
+  //         headless boot check "phaser booted: true, errors: none" (verify-shots/live-menu.png).
 
 ---
 
