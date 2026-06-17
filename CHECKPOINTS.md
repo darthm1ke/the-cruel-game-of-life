@@ -1,6 +1,6 @@
-# The Cruel Game of Life — Development Checkpoints
+# The Cruel Game of Life - Development Checkpoints
 
-> A brutal vicious-cycle survival clicker. The body isn't the joke — the *system* is.
+> A brutal vicious-cycle survival clicker. The body isn't the joke - the *system* is.
 > Based on the design in `convoaboutgame.md`.
 
 ## How to use this file
@@ -13,10 +13,10 @@ works **before** we mark it done. We do not check a box until its VERIFY passes.
 ---
 
 ## Tech Stack (decided)
-- **Phaser 3** — WebGL 2D game framework (great graphics + pixel-perfect retro rendering)
-- **TypeScript** — type safety across the many interacting stat systems
-- **Vite** — dev server + static build (deploys anywhere, runs fully in-browser)
-- **Code-generated pixel art** — sprites drawn procedurally in code (no asset pipeline)
+- **Phaser 3** - WebGL 2D game framework (great graphics + pixel-perfect retro rendering)
+- **TypeScript** - type safety across the many interacting stat systems
+- **Vite** - dev server + static build (deploys anywhere, runs fully in-browser)
+- **Code-generated pixel art** - sprites drawn procedurally in code (no asset pipeline)
 - Art direction: **8-bit retro**, single static room, clicker UI, bars everywhere
 
 ---
@@ -25,10 +25,10 @@ works **before** we mark it done. We do not check a box until its VERIFY passes.
 `scripts/verify.mjs` (run `npm run dev` in one terminal, then `node scripts/verify.mjs`)
 drives a headless Chrome against the running game: it confirms no page errors,
 screenshots Menu/Debug/Game/GameOver into `verify-shots/`, and runs 20 assertions
-against the pure `GameState` engine. **Current status: ALL GREEN — 20/20, 0 errors.**
+against the pure `GameState` engine. **Current status: ALL GREEN - 20/20, 0 errors.**
 This is the tool we use to satisfy each `// VERIFY:` note below.
 
-## Milestone 0 — Project scaffold
+## Milestone 0 - Project scaffold
 - [x] Vite + Phaser + TypeScript project boots to a blank Phaser canvas
   // VERIFY: `npm run dev` serves on localhost; opening it shows a Phaser canvas
   //         (check title in tab + no console errors + Phaser version logged).
@@ -40,7 +40,7 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
   // VERIFY: clicking through the menu reaches the game scene; dying returns to GameOver;
   //         "restart" returns to a fresh game with reset stats. Log scene transitions.
 
-## Milestone 1 — Protagonist weight-tier sprite system
+## Milestone 1 - Protagonist weight-tier sprite system
 - [x] Procedural pixel-art generator for the man across 6 weight tiers (0 lean -> 5 morbid)
   // VERIFY: render all 6 tiers side-by-side on a debug screen; each is visibly a different
   //         body size, same character identity, crisp pixels. Screenshot comparison.
@@ -61,7 +61,7 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
   // VERIFY: render all objects in the room; each is identifiable as its 8-bit icon.
   // DONE: all 9 object icons render in Debug + the Game room.
 
-## Milestone 2 — Core stat model & daily cycle (the engine)
+## Milestone 2 - Core stat model & daily cycle (the engine)
 - [x] `GameState` holds: weight, hunger, energy, money, debt, mood, control, healthRisk, hope, day
   // VERIFY: unit-style console assertions: fresh state has expected starting values;
   //         clamping keeps every 0-100 stat in range; weight/money never NaN.
@@ -75,7 +75,7 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
   // VERIFY: each action moves the expected stats in the expected direction by the
   //         expected amount (table-driven test in console). Work gated by energy.
   // DONE: work pays+costs energy+uses slot, exercise lowers weight, cook lowers hunger,
-  //       work gated when exhausted — all assert PASS.
+  //       work gated when exhausted - all assert PASS.
 - [x] Stat coupling: cheap food = low energy; overeating slows movement/work; bad sleep/mood/
       weight drains energy; eating healthy is expensive
   // VERIFY: scripted scenarios in console (e.g. "eat cheap 5 days") produce the predicted
@@ -84,7 +84,7 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
   //       snack=+weight+healthRisk/low energy). Directionally verified; deeper multi-day
   //       trajectory test still worth adding in the balance pass (M6).
 
-## Milestone 3 — The brutal systems (the teeth)
+## Milestone 3 - The brutal systems (the teeth)
 - [x] Binge threshold: hunger + depression + craving vs a per-day threshold; crossing it loses the day
   // VERIFY: force stats above threshold -> binge fires; below -> it doesn't. Log the
   //         comparison each day. Confirm next-day threshold gets *easier* after a binge.
@@ -116,7 +116,7 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
   // DONE: won/crash/debt causes assert PASS with correct GameOver copy. 'starved' (hunger
   //       collapse) + 'heart' (hospital death) implemented but not yet asserted; add tests.
 
-## Milestone 4 — Miracle medication (sketchy black-market upgrade)
+## Milestone 4 - Miracle medication (sketchy black-market upgrade)
 - [x] Unlockable risky appetite suppressant ("The Gray Pen" / "GLP-???") via internet quest
   // VERIFY: complete the SearchOnline quest chain -> item unlocks for purchase. Confirm
   //         it's gated (can't buy before unlock).
@@ -128,7 +128,7 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
   // DONE: implemented (-$90, -45 hunger, 45% side-effect: +healthRisk/-mood/-energy).
   //       TODO: add a many-run assertion for cost + side-effect rate.
 
-## Milestone 5 — UI / feel / tone
+## Milestone 5 - UI / feel / tone
 - [x] Stat bars for every resource, always visible, 8-bit styled
   // VERIFY: every stat has a labeled bar that updates live as actions resolve; values
   //         match `GameState` exactly (no drift).
@@ -154,7 +154,7 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
       horizontally (rotated slump pose) with floating "z"s while the window runs a night
       cycle (evening -> moon -> dawn sun), then wakes into the new morning and reveals the
       overnight popups. Fixed: window sun showed a moon (was using the recolored cream pom
-      for the sun — now a dedicated yellow SUN / pale MOON). Fixed: holding hurry across
+      for the sun - now a dedicated yellow SUN / pale MOON). Fixed: holding hurry across
       actions now speeds each new action (hurryHeld re-applied per tween).
   // VERIFY: end the day -> sprite sleeps horizontally, moon at 01:00, wakes at 07:00 with
   //         sun. DONE: verify-shots/9-sleeping.png + /10-new-morning.png; /5 sun at 07:00.
@@ -189,7 +189,7 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
   // VERIFY: actions and key events produce sound; mute toggle works; no audio errors.
   // NOT STARTED.
 
-## Milestone 6 — Persistence & polish
+## Milestone 6 - Persistence & polish
 - [~] Save/resume run + high-score-by-days-survived in localStorage
   // VERIFY: refresh mid-run restores state exactly; best run persists across reloads.
   // DONE: best-days-survived persists (GameOver.saveBest/loadBest). TODO: mid-run
@@ -211,17 +211,17 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
 ---
 
 ## Resume notes (update as we go)
-- Current focus: **playable vertical slice complete** — Milestones 0-2 fully verified;
+- Current focus: **playable vertical slice complete** - Milestones 0-2 fully verified;
   3, 4, 5 substantially done; 6 partial.
-- Last verified checkpoint: **verify harness ALL GREEN — 20/20 assertions, 0 page errors.**
-- How to run: `npm install`, then `npm run dev` (game) — or `node scripts/verify.mjs`
+- Last verified checkpoint: **verify harness ALL GREEN - 20/20 assertions, 0 page errors.**
+- How to run: `npm install`, then `npm run dev` (game) - or `node scripts/verify.mjs`
   in a second terminal (with dev running) to re-run all verifications + refresh screenshots.
 - Highest-value next steps:
-  1. Balance pass (M6) — write an automated "play N full runs" sim in verify.mjs, log
+  1. Balance pass (M6) - write an automated "play N full runs" sim in verify.mjs, log
      death causes + days survived, then tune `src/config.ts` until it's brutally *fair*.
   2. Add the missing assertions called out above (starved/heart causes, med side-effect
      rate, hospital survive-vs-die branch, multi-day stat-coupling trajectory).
-  3. Audio (M5) — code-generated 8-bit SFX via WebAudio; mute toggle.
+  3. Audio (M5) - code-generated 8-bit SFX via WebAudio; mute toggle.
   4. Mid-run save/resume of full GameState (M6).
   5. Flesh out the event table + screenshot a live popup; richer search-quest chain (M4).
 - Architecture notes: `src/state/` is pure logic (no Phaser) so it's testable headlessly.
