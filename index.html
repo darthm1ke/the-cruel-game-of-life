@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>The Cruel Game of Life</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #0b0b10;
+        overflow: hidden;
+        font-family: monospace;
+      }
+      #game {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      /* Keep the 8-bit pixels crisp when the canvas is scaled by the browser. */
+      #game canvas {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+      #boot-msg {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #4a4a5a;
+        font-size: 14px;
+        letter-spacing: 2px;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="boot-msg">LOADING…</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
