@@ -73,6 +73,27 @@ export class PixelTexture {
     return this;
   }
 
+  /**
+   * Add a 1px outline around every opaque region (the classic 16-bit sprite
+   * look). Transparent pixels orthogonally adjacent to an opaque pixel become
+   * the outline color. Call after all drawing, before commit().
+   */
+  outline(color = 0x171320, alpha = 1): this {
+    const img = this.ctx.getImageData(0, 0, this.w, this.h);
+    const d = img.data;
+    const opaque = (x: number, y: number) =>
+      x >= 0 && y >= 0 && x < this.w && y < this.h && d[(y * this.w + x) * 4 + 3] > 24;
+    const edge: number[] = [];
+    for (let y = 0; y < this.h; y++) {
+      for (let x = 0; x < this.w; x++) {
+        if (d[(y * this.w + x) * 4 + 3] > 24) continue; // already opaque
+        if (opaque(x - 1, y) || opaque(x + 1, y) || opaque(x, y - 1) || opaque(x, y + 1)) edge.push(x, y);
+      }
+    }
+    for (let i = 0; i < edge.length; i += 2) this.px(edge[i], edge[i + 1], color, alpha);
+    return this;
+  }
+
   /** Push pixels to the GPU. Call once after drawing. */
   commit(): string {
     this.canvasTex.refresh();

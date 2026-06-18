@@ -116,6 +116,7 @@ export function generateObject(scene: Phaser.Scene, name: ObjName): string {
   const cfg = BUILDERS[name];
   const p = new PixelTexture(scene, key, cfg.w, cfg.h);
   cfg.draw(p);
+  p.outline(PAL.outline);
   return p.commit();
 }
 

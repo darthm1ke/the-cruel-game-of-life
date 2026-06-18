@@ -109,6 +109,14 @@ export function generateMan(scene: Phaser.Scene, t: WeightTier, pose: Pose, fram
     p.px(CX + x, yy, PAL.coatShade);
     p.px(CX + x, yy + 1, PAL.coatShade, 0.6);
   }
+  // upper-left highlight (light source from top-left)
+  p.ellipse(
+    CX - Math.round(coatRx * 0.28),
+    bodyCy - Math.round(coatRy * 0.38),
+    Math.round(coatRx * 0.5),
+    Math.round(coatRy * 0.38),
+    PAL.coatLight
+  );
   // hoodie kangaroo pocket across the lower belly
   const pocketW = Math.round(coatRx * 0.85);
   const pocketY = bodyCy + Math.round(coatRy * 0.2);
@@ -157,6 +165,8 @@ export function generateMan(scene: Phaser.Scene, t: WeightTier, pose: Pose, fram
   // ===== HEAD =====
   const headRx = headR + (t.tier >= 4 ? 2 : 0);
   p.ellipse(CX, headCy, headRx, headR, PAL.skin);
+  // forehead/cheek highlight (upper-left)
+  p.ellipse(CX - 3, headCy + 1, headRx - 5, headR - 5, PAL.skinLight);
   // chubby cheeks for heavier tiers
   if (t.tier >= 2) {
     p.ellipse(CX - headRx + 3, headCy + 5, 4, 3, PAL.skinShade);
@@ -194,9 +204,13 @@ export function generateMan(scene: Phaser.Scene, t: WeightTier, pose: Pose, fram
   // dome shading
   p.ellipse(CX + 3, bandY - 2, headRx - 5, 5, PAL.hatShade);
   p.ellipse(CX, bandY - 1, headRx - 2, 7, PAL.hat);
+  // dome highlight
+  p.ellipse(CX - 3, bandY - 4, headRx - 7, 3, PAL.hatLight);
   // pom-pom
   p.ellipse(CX, bandY - 11, 4, 4, PAL.pom);
 
+  // dark outline around the whole sprite (16-bit look)
+  p.outline(PAL.outline);
   return p.commit();
 }
 

@@ -43,15 +43,22 @@ export const PAL = {
   gray: 0x6b6b7b,
   grayDark: 0x3a3a48,
   // character — original palette (Cartman-style model, NOT his colors)
+  // each material has a light / base / shade tone for 16-bit-style shading
+  outline: 0x171320, // dark sprite outline
   skin: 0xeec79a,
+  skinLight: 0xfadfb8,
   skinShade: 0xd0a06f,
   coat: 0x3f9e6e, // forest-green hoodie
+  coatLight: 0x5cc090,
   coatShade: 0x2c7150,
   hat: 0x3a4a8e, // indigo beanie
+  hatLight: 0x586bbf,
   hatShade: 0x29356a,
   pom: 0xe8e6df, // cream puffball
   mitten: 0x9a9aae, // grey mittens
+  mittenShade: 0x6e6e80,
   pants: 0x33415e, // denim
+  pantsLight: 0x47597e,
   pantsShade: 0x232d44,
   mouth: 0x7a2a2a,
   // ui / stats

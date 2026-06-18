@@ -215,6 +215,19 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
       A full pre-iso backup lives at ../thecruelgameoflife-BACKUP-frontview/.
   // VERIFY: walk to each corner zone + sleep, confirm depth/looks right. DONE:
   //         verify-shots/5 (room), /6b (sit at desk), /8 (evening), /9 (sleep). All green.
+- [x] READABLE FONT: replaced chunky monospace with VT323 (clean pixel font, loaded from
+      Google Fonts, monospace fallback). Boot waits for the font (no top-level await -> the
+      es2020 build target rejected TLA; deferred game start in a .then instead).
+  // VERIFY: text legible in screenshots + build passes. DONE: verify-shots/5; build OK.
+- [x] 16-BIT ART UPLIFT (procedural half of the hybrid): added PixelTexture.outline() for a
+      dark sprite outline, plus highlight/shade tones on the character (hoodie/hat/face) and
+      outlines on all objects. Richer, more crafted look without real assets.
+  // VERIFY: debug tier row + game show outlines + shading. DONE: verify-shots/2 + /5.
+- [x] ASSET PIPELINE (assets-later half): src/art/assets.ts ASSET_OVERRIDES + Preload loads
+      them first; procedural generators skip any key already loaded, so hand-made PNGs drop
+      in per-key with no game changes. Spec for artists in public/assets/README.md.
+  // VERIFY: empty overrides -> 100% procedural, build passes. DONE. Add entries when art
+  //         arrives (keys: man_t{0-5}_{pose}_{frame}, obj_{name}).
 - [x] PUBLISHED + LIVE: public GitHub repo with topics/description/Discussions, and a
       GitHub Actions workflow auto-deploys the build to GitHub Pages on every push.
   // VERIFY: the public URL boots the game in a real browser with no errors. DONE:
