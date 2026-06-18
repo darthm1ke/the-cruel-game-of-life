@@ -1,7 +1,12 @@
 import Phaser from 'phaser';
 import { PAL } from '../config';
 
-/** Crisp pixel-ish text. Small monospace sizes scaled by the FIT canvas. */
+/**
+ * Legible pixel text. Uses VT323 (a clean pixel font) which reads much better
+ * than raw monospace at small sizes. VT323's glyphs sit small in their em box,
+ * so we scale the requested size up ~1.5x to match the old visual weight while
+ * gaining clarity. High resolution keeps it sharp under the pixel-art upscaler.
+ */
 export function pixelText(
   scene: Phaser.Scene,
   x: number,
@@ -12,10 +17,10 @@ export function pixelText(
 ): Phaser.GameObjects.Text {
   return scene.add
     .text(x, y, text, {
-      fontFamily: 'monospace',
-      fontSize: `${size}px`,
+      fontFamily: "'VT323', monospace",
+      fontSize: `${Math.round(size * 1.5)}px`,
       color: '#' + color.toString(16).padStart(6, '0'),
-      resolution: 3,
+      resolution: 4,
     })
     .setOrigin(0, 0);
 }

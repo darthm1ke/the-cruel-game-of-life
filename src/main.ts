@@ -6,6 +6,7 @@ import { MenuScene } from './scenes/Menu';
 import { GameScene } from './scenes/Game';
 import { GameOverScene } from './scenes/GameOver';
 import { DebugScene } from './scenes/Debug';
+import { GameState } from './state/GameState';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -23,11 +24,17 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, PreloadScene, MenuScene, GameScene, GameOverScene, DebugScene],
 };
 
+// Wait for the pixel font so the first (static) text renders with it, not a fallback.
+try {
+  await Promise.race([document.fonts.load('32px "VT323"').then(() => document.fonts.ready), new Promise((r) => setTimeout(r, 2500))]);
+} catch {
+  /* font CDN unreachable -> falls back to monospace */
+}
+
 const game = new Phaser.Game(config);
 
 // Expose hooks for the headless verification harness (scripts/verify.mjs).
 // Harmless in production; lets tests drive scenes + exercise the pure engine.
-import { GameState } from './state/GameState';
 (window as unknown as Record<string, unknown>).__tcgol = { game, GameState };
 
 // Hide the HTML loading message once Phaser has the canvas.
