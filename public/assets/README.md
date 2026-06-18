@@ -1,7 +1,7 @@
 # Art assets (drop-in pixel art)
 
 All in-game art is generated procedurally in code by default. You can replace any
-piece with hand-made pixel art **without touching the game logic** — the renderer
+piece with hand-made pixel art **without touching the game logic** - the renderer
 addresses every sprite by a texture *key*, and a loaded asset simply overrides the
 procedural one.
 
@@ -14,16 +14,16 @@ procedural one.
      { key: 'obj_fridge', path: 'assets/obj/fridge.png' },
    ];
    ```
-4. Done — that key now uses your art; everything else stays procedural. Mix freely.
+4. Done - that key now uses your art; everything else stays procedural. Mix freely.
 
 ## Style target
 16-bit, hand-shaded pixel art in the spirit of *Ocean's Heart*: a clear dark
 outline, 3 - 4 shade tones per material (highlight / base / shadow), light coming
 from the upper-left. The world is a shallow ~20-degree 3/4 (near-isometric) view,
-but **sprites are flat, front-facing billboards** (like Octopath / Ocean's Heart) —
+but **sprites are flat, front-facing billboards** (like Octopath / Ocean's Heart) -
 you do NOT draw them in perspective.
 
-## Character — keys `man_t{TIER}_{POSE}_{FRAME}`
+## Character - keys `man_t{TIER}_{POSE}_{FRAME}`
 - Canvas: **72 x 86 px**, transparent, character centered, **feet on the bottom edge**
   (origin is bottom-center). Keep a 1px margin for the outline.
 - `TIER` 0-5 = body size: 0 Lean, 1 Average, 2 Overweight, 3 Heavy, 4 Very Heavy,
@@ -40,7 +40,7 @@ you do NOT draw them in perspective.
 - Full set = 6 tiers x (2+4+2+2+1+2) = **78 frames**. You can override a subset;
   any missing frame stays procedural.
 
-## Objects — keys `obj_{NAME}`
+## Objects - keys `obj_{NAME}`
 Single image each, transparent, drawn front-on, **base at the bottom edge** (origin
 bottom-center). Native sizes (you may supply higher-res; keep the aspect):
 | key | name | approx px (w x h) |
@@ -60,5 +60,5 @@ character's height), so design at a consistent small px scale and it will be siz
 to fit.
 
 ## Questions / collaboration
-This is exactly the art the project is looking for a collaborator on — see the
+This is exactly the art the project is looking for a collaborator on - see the
 "Artists wanted" note in the top-level `README.md`.

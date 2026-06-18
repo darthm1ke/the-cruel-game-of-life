@@ -25,11 +25,14 @@ const BUILDERS: Record<ObjName, { w: number; h: number; draw: Builder }> = {
     w: 22,
     h: 30,
     draw: (p) => {
-      p.rect(3, 1, 16, 28, PAL.gray);
-      p.rect(4, 2, 14, 26, PAL.white);
-      p.hline(4, 13, 14, PAL.gray); // door split
-      p.rect(15, 4, 2, 6, PAL.grayDark); // top handle
-      p.rect(15, 16, 2, 8, PAL.grayDark); // bottom handle
+      p.rect(3, 1, 16, 28, 0x9aa0ad); // metal body
+      p.rect(4, 2, 13, 26, 0xe8eaf0); // bright front face
+      p.rect(4, 2, 2, 26, 0xf6f8fc); // left highlight column (lit)
+      p.rect(15, 2, 2, 26, 0xb7bcc8); // right shade column
+      p.hline(4, 12, 13, 0x9aa0ad); // freezer / fridge split
+      p.rect(13, 4, 2, 6, 0x6b7180); // top handle
+      p.rect(13, 15, 2, 8, 0x6b7180); // bottom handle
+      p.px(7, 7, 0xc8ccd6); // panel detail
     },
   },
   snack: {
@@ -47,28 +50,38 @@ const BUILDERS: Record<ObjName, { w: number; h: number; draw: Builder }> = {
     w: 22,
     h: 16,
     draw: (p) => {
-      p.rect(3, 2, 16, 10, PAL.grayDark); // screen frame
-      p.rect(4, 3, 14, 8, PAL.blue); // screen
-      p.rect(2, 12, 18, 2, PAL.gray); // base
+      p.rect(3, 1, 16, 10, 0x2a2a34); // monitor frame
+      p.rect(4, 2, 14, 8, 0x5a86b0); // screen
+      p.rect(4, 2, 14, 3, 0x79a8d8); // screen glow (top)
+      p.px(6, 4, 0xbfe0ff); // glint
+      p.rect(2, 11, 18, 3, 0x6b6b7b); // keyboard base
+      p.rect(2, 11, 18, 1, 0x9a9aae); // base highlight
     },
   },
   treadmill: {
     w: 26,
     h: 22,
     draw: (p) => {
-      p.rect(2, 16, 22, 4, PAL.grayDark); // belt
-      p.rect(2, 15, 22, 1, PAL.gray);
-      p.rect(20, 4, 2, 12, PAL.gray); // upright
-      p.rect(15, 3, 8, 2, PAL.gray); // console
+      p.rect(2, 17, 22, 4, 0x33333f); // belt base
+      p.rect(2, 16, 22, 1, 0x55556a); // belt top highlight
+      for (let x = 4; x < 24; x += 3) p.px(x, 18, 0x44444f); // belt slats
+      p.rect(19, 4, 3, 13, 0x6b6b7b); // upright
+      p.rect(19, 4, 1, 13, 0x9a9aae); // upright highlight
+      p.rect(14, 2, 9, 3, 0x4a4a58); // console
+      p.rect(15, 3, 3, 1, 0x5a9e54); // console readout
     },
   },
   bed: {
     w: 28,
     h: 16,
     draw: (p) => {
-      p.rect(2, 8, 24, 6, PAL.grayDark); // frame
-      p.rect(3, 6, 22, 3, PAL.blue); // mattress
-      p.rect(3, 5, 7, 3, PAL.white); // pillow
+      p.rect(2, 9, 24, 5, 0x4a3a30); // wooden frame
+      p.rect(2, 9, 24, 1, 0x5e4a3c); // frame highlight
+      p.rect(3, 6, 22, 4, 0x4a6a9e); // blanket
+      p.rect(3, 6, 22, 1, 0x6a8abf); // blanket highlight
+      p.rect(3, 9, 22, 1, 0x33507a); // blanket fold shadow
+      p.rect(3, 4, 9, 4, 0xe8e6df); // pillow
+      p.rect(3, 4, 9, 1, 0xfafafa); // pillow highlight
     },
   },
   mailbox: {

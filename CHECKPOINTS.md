@@ -228,6 +228,12 @@ This is the tool we use to satisfy each `// VERIFY:` note below.
       in per-key with no game changes. Spec for artists in public/assets/README.md.
   // VERIFY: empty overrides -> 100% procedural, build passes. DONE. Add entries when art
   //         arrives (keys: man_t{0-5}_{pose}_{frame}, obj_{name}).
+- [x] ART POLISH PASS: character love handles (grow per weight tier) + richer body shading;
+      warm wood-plank floor + a worn red area rug; wall panel seams + crown molding;
+      shaded furniture (metallic fridge, blanketed bed, slatted treadmill, glowing monitor).
+      Full rich descriptions of the character + every asset written to docs/ART.md.
+  // VERIFY: debug tiers show growing love handles; room reads as a furnished interior.
+  //         DONE: verify-shots/2 + /5; ALL GREEN; build passes.
 - [x] PUBLISHED + LIVE: public GitHub repo with topics/description/Discussions, and a
       GitHub Actions workflow auto-deploys the build to GitHub Pages on every push.
   // VERIFY: the public URL boots the game in a real browser with no errors. DONE:

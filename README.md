@@ -84,6 +84,8 @@ node scripts/verify.mjs     # in terminal 2  -> screenshots land in verify-shots
 | `src/scenes/`     | Phaser scenes: Boot, Preload, Menu, Game, GameOver, Debug |
 | `src/ui/`         | Stat bars, buttons, pixel text |
 | `scripts/verify.mjs` | Headless verification harness |
+| `docs/ART.md`     | Rich descriptions of the character + every procedural asset |
+| `public/assets/`  | Drop-in pixel-art spec (replace any sprite with real art) |
 | `CHECKPOINTS.md`  | Roadmap + per-item verification notes + resume state |
 
 ## Status

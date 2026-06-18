@@ -147,29 +147,44 @@ export class GameScene extends Phaser.Scene {
     const up = (p: V): V => ({ x: p.x, y: p.y - WALL_H });
 
     // back-left wall (along A-D) and back-right wall (along A-B)
-    g.fillStyle(0x241d30, 1).fillPoints([A, D, up(D), up(A)], true); // left, darker
-    g.fillStyle(0x2f2640, 1).fillPoints([A, B, up(B), up(A)], true); // right, lighter
+    g.fillStyle(0x241d30, 1).fillPoints([A, D, up(D), up(A)], true); // left, in shadow
+    g.fillStyle(0x33294a, 1).fillPoints([A, B, up(B), up(A)], true); // right, lit
+    // crown molding (lighter band along the top of each wall)
+    const crown = (p1: V, p2: V) =>
+      g.fillPoints([up(p1), up(p2), { x: up(p2).x, y: up(p2).y + 3 }, { x: up(p1).x, y: up(p1).y + 3 }], true);
+    g.fillStyle(0x3c3158, 1);
+    crown(A, B);
+    g.fillStyle(0x2c2342, 1);
+    crown(A, D);
+    // vertical wall-panel seams
+    g.lineStyle(1, 0x1d1730, 0.6);
+    for (let c = 1; c < GRID.cols; c++) g.lineBetween(iso(c, 0).x, iso(c, 0).y, iso(c, 0).x, iso(c, 0).y - WALL_H);
+    for (let r = 1; r < GRID.rows; r++) g.lineBetween(iso(0, r).x, iso(0, r).y, iso(0, r).x, iso(0, r).y - WALL_H);
     // baseboards
     g.fillStyle(PAL.bg0, 1);
     g.fillPoints([A, D, { x: D.x, y: D.y - 3 }, { x: A.x, y: A.y - 3 }], true);
     g.fillPoints([A, B, { x: B.x, y: B.y - 3 }, { x: A.x, y: A.y - 3 }], true);
 
-    // floor diamond + tile checker
-    g.fillStyle(PAL.floor, 1).fillPoints([A, B, C, D], true);
+    // floor: warm wood planks (two tones, checkered) with a lit top edge per tile
+    g.fillStyle(0x4a3a2e, 1).fillPoints([A, B, C, D], true);
     for (let c = 0; c < GRID.cols; c++) {
       for (let r = 0; r < GRID.rows; r++) {
-        if ((c + r) % 2 === 0) continue;
         const t0 = iso(c, r);
         const t1 = iso(c + 1, r);
         const t2 = iso(c + 1, r + 1);
         const t3 = iso(c, r + 1);
-        g.fillStyle(0x312930, 1).fillPoints([t0, t1, t2, t3], true);
+        g.fillStyle((c + r) % 2 ? 0x3e3026 : 0x4a3a2e, 1).fillPoints([t0, t1, t2, t3], true);
+        // subtle lit edge along the tile's upper-left
+        g.lineStyle(1, 0x5a4838, 0.4).lineBetween(t3.x, t3.y, t0.x, t0.y);
       }
     }
-    // floor grid lines
-    g.lineStyle(1, PAL.bg2, 0.5);
+    // grout lines
+    g.lineStyle(1, 0x2a2018, 0.5);
     for (let c = 0; c <= GRID.cols; c++) g.lineBetween(iso(c, 0).x, iso(c, 0).y, iso(c, GRID.rows).x, iso(c, GRID.rows).y);
     for (let r = 0; r <= GRID.rows; r++) g.lineBetween(iso(0, r).x, iso(0, r).y, iso(GRID.cols, r).x, iso(GRID.cols, r).y);
+
+    // a worn area rug in the open middle, to ground the space
+    this.drawRug(g, 2.2, 1.6, 4.8, 3.8);
 
     // window parallelogram on the back-right wall
     const dir = { x: ISO.tw / 2, y: ISO.th / 2 }; // one column step along the wall
@@ -216,6 +231,31 @@ export class GameScene extends Phaser.Scene {
   private placeObj(n: ObjName, vx: number, vy: number, scale = 1.2) {
     const p = iso(vx, vy);
     this.add.image(p.x, p.y, objKey(n)).setOrigin(0.5, 1).setScale(scale).setDepth(p.y);
+  }
+
+  /** A worn area rug across the given floor-grid rectangle (vertex coords). */
+  private drawRug(g: Phaser.GameObjects.Graphics, x0: number, y0: number, x1: number, y1: number) {
+    const A = iso(x0, y0);
+    const B = iso(x1, y0);
+    const C = iso(x1, y1);
+    const D = iso(x0, y1);
+    g.fillStyle(0x6e3338, 1).fillPoints([A, B, C, D], true); // faded deep-red rug
+    g.lineStyle(2, 0xb5803a, 0.9).strokePoints([A, B, C, D], true); // gold border
+    const a2 = iso(x0 + 0.6, y0 + 0.45);
+    const b2 = iso(x1 - 0.6, y0 + 0.45);
+    const c2 = iso(x1 - 0.6, y1 - 0.45);
+    const d2 = iso(x0 + 0.6, y1 - 0.45);
+    g.lineStyle(1, 0xc99a4f, 0.8).strokePoints([a2, b2, c2, d2], true); // inner band
+    const m = iso((x0 + x1) / 2, (y0 + y1) / 2); // center motif
+    g.fillStyle(0xc99a4f, 0.85).fillPoints(
+      [
+        { x: m.x, y: m.y - 5 },
+        { x: m.x + 9, y: m.y },
+        { x: m.x, y: m.y + 5 },
+        { x: m.x - 9, y: m.y },
+      ],
+      true
+    );
   }
 
   /** Move the character to floor-grid vertex (vx, vy): project + depth-sort. */

@@ -117,6 +117,18 @@ export function generateMan(scene: Phaser.Scene, t: WeightTier, pose: Pose, fram
     Math.round(coatRy * 0.38),
     PAL.coatLight
   );
+  // love handles: soft waist bulges that grow with the weight tier (none when lean)
+  if (t.tier >= 1) {
+    const lhR = 2 + t.tier;
+    const lhY = bodyCy + Math.round(coatRy * 0.45);
+    const lhX = Math.round(coatRx * 0.92);
+    for (const sgn of [-1, 1]) {
+      const cx = CX + sgn * lhX;
+      p.ellipse(cx, lhY, lhR, Math.round(lhR * 0.8), PAL.coat);
+      p.ellipse(cx, lhY + 1, Math.max(1, lhR - 1), 2, PAL.coatShade); // underside roll shadow
+      p.ellipse(cx - 1, lhY - 1, Math.max(1, lhR - 3), 1, PAL.coatLight); // top sheen
+    }
+  }
   // hoodie kangaroo pocket across the lower belly
   const pocketW = Math.round(coatRx * 0.85);
   const pocketY = bodyCy + Math.round(coatRy * 0.2);
